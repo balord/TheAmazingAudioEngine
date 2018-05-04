@@ -911,7 +911,7 @@ static OSStatus ioUnitRenderNotifyCallback(void *inRefCon, AudioUnitRenderAction
     
     return [self reinitializeWithChanges:^{
         [self willChangeValueForKey:@"audioDescription"];
-        _audioDescription = audioDescription;
+        self->_audioDescription = audioDescription;
         [self didChangeValueForKey:@"audioDescription"];
     } error:error];
 }
@@ -925,8 +925,8 @@ static OSStatus ioUnitRenderNotifyCallback(void *inRefCon, AudioUnitRenderAction
         self.inputEnabled = inputEnabled;
         
 #if TARGET_OS_IPHONE
-        [self setAudioSessionCategory:_inputEnabled
-            ? (_outputEnabled ? AVAudioSessionCategoryPlayAndRecord : AVAudioSessionCategoryRecord)
+        [self setAudioSessionCategory:self->_inputEnabled
+            ? (self->_outputEnabled ? AVAudioSessionCategoryPlayAndRecord : AVAudioSessionCategoryRecord)
             : AVAudioSessionCategoryPlayback];
 #endif
         
@@ -942,8 +942,8 @@ static OSStatus ioUnitRenderNotifyCallback(void *inRefCon, AudioUnitRenderAction
         self.outputEnabled = outputEnabled;
         
 #if TARGET_OS_IPHONE
-        [self setAudioSessionCategory:_inputEnabled
-            ? (_outputEnabled ? AVAudioSessionCategoryPlayAndRecord : AVAudioSessionCategoryRecord)
+        [self setAudioSessionCategory:self->_inputEnabled
+            ? (self->_outputEnabled ? AVAudioSessionCategoryPlayAndRecord : AVAudioSessionCategoryRecord)
             : AVAudioSessionCategoryPlayback];
 #endif
         
@@ -961,21 +961,21 @@ static OSStatus ioUnitRenderNotifyCallback(void *inRefCon, AudioUnitRenderAction
     NSAssert([NSThread isMainThread], @"Should be executed on the main thread");
     
     return [self reinitializeWithChanges:^{
-        if ( memcmp(&_audioDescription, &audioDescription, sizeof(audioDescription)) ) {
+        if ( memcmp(&self->_audioDescription, &audioDescription, sizeof(audioDescription)) ) {
             [self willChangeValueForKey:@"audioDescription"];
-            _audioDescription = audioDescription;
+            self->_audioDescription = audioDescription;
             [self didChangeValueForKey:@"audioDescription"];
         }
-        if ( _inputEnabled != inputEnabled ) {
+        if ( self->_inputEnabled != inputEnabled ) {
             self.inputEnabled = inputEnabled;
         }
-        if ( _outputEnabled != outputEnabled ) {
+        if ( self->_outputEnabled != outputEnabled ) {
             self.outputEnabled = outputEnabled;
         }
         
 #if TARGET_OS_IPHONE
-        [self setAudioSessionCategory:_inputEnabled
-            ? (_outputEnabled ? AVAudioSessionCategoryPlayAndRecord : AVAudioSessionCategoryRecord)
+        [self setAudioSessionCategory:self->_inputEnabled
+            ? (self->_outputEnabled ? AVAudioSessionCategoryPlayAndRecord : AVAudioSessionCategoryRecord)
             : AVAudioSessionCategoryPlayback];
 #endif
         
@@ -1497,8 +1497,8 @@ static OSStatus ioUnitRenderNotifyCallback(void *inRefCon, AudioUnitRenderAction
     void *callback = filter.filterCallback;
     __block BOOL found = NO;
     [self performSynchronousMessageExchangeWithBlock:^{
-        for ( int i=0; i<_inputCallbackCount; i++ ) {
-            removeCallbackFromTable(self, &_inputCallbacks[i].callbacks, callback, (__bridge void *)filter, &found);
+        for ( int i=0; i<self->_inputCallbackCount; i++ ) {
+            removeCallbackFromTable(self, &self->_inputCallbacks[i].callbacks, callback, (__bridge void *)filter, &found);
         }
     }];
     
@@ -1620,9 +1620,9 @@ static OSStatus ioUnitRenderNotifyCallback(void *inRefCon, AudioUnitRenderAction
     void *callback = receiver.receiverCallback;
     __block int instanceCount = 0;
     [self performSynchronousMessageExchangeWithBlock:^{
-        for ( int i=0; i<_inputCallbackCount; i++ ) {
+        for ( int i=0; i<self->_inputCallbackCount; i++ ) {
             BOOL found = NO;
-            removeCallbackFromTable(self, &_inputCallbacks[i].callbacks, callback, (__bridge void *)receiver, &found);
+            removeCallbackFromTable(self, &self->_inputCallbacks[i].callbacks, callback, (__bridge void *)receiver, &found);
             if ( found ) instanceCount++;
         }
     }];
@@ -1646,7 +1646,7 @@ static OSStatus ioUnitRenderNotifyCallback(void *inRefCon, AudioUnitRenderAction
             __block BOOL found = NO;
             
             [self performSynchronousMessageExchangeWithBlock:^{
-                removeCallbackFromTable(self, &_inputCallbacks[i].callbacks, callback, (__bridge void *)receiver, &found);
+                removeCallbackFromTable(self, &self->_inputCallbacks[i].callbacks, callback, (__bridge void *)receiver, &found);
             }];
 
             if ( found ) {
@@ -1681,7 +1681,7 @@ static OSStatus ioUnitRenderNotifyCallback(void *inRefCon, AudioUnitRenderAction
     
     void *callback = receiver.timingReceiverCallback;
     [self performSynchronousMessageExchangeWithBlock:^{
-        addCallbackToTable(self, &_timingCallbacks, callback, (__bridge void *)receiver, 0);
+        addCallbackToTable(self, &self->_timingCallbacks, callback, (__bridge void *)receiver, 0);
     }];
 }
 
@@ -1689,7 +1689,7 @@ static OSStatus ioUnitRenderNotifyCallback(void *inRefCon, AudioUnitRenderAction
     void *callback = receiver.timingReceiverCallback;
     __block BOOL found = NO;
     [self performSynchronousMessageExchangeWithBlock:^{
-        removeCallbackFromTable(self, &_timingCallbacks, callback, (__bridge void *)receiver, &found);
+        removeCallbackFromTable(self, &self->_timingCallbacks, callback, (__bridge void *)receiver, &found);
     }];
     
     if ( found ) {
@@ -2312,9 +2312,9 @@ AudioTimeStamp AEAudioControllerCurrentAudioTimestamp(__unsafe_unretained AEAudi
     dispatch_async(dispatch_get_main_queue(), ^{
         if ( [notification.userInfo[AVAudioSessionInterruptionTypeKey] intValue] == AVAudioSessionInterruptionTypeEnded ) {
             NSLog(@"TAAE: Audio session interruption ended");
-            _interrupted = NO;
+            self->_interrupted = NO;
             
-            if ( [[UIApplication sharedApplication] applicationState] != UIApplicationStateBackground || _started ) {
+            if ( [[UIApplication sharedApplication] applicationState] != UIApplicationStateBackground || self->_started ) {
                 // make sure we are again the active session
                 NSError *error = nil;
                 if ( ![((AVAudioSession*)[AVAudioSession sharedInstance]) setActive:YES error:&error] ) {
@@ -2322,22 +2322,22 @@ AudioTimeStamp AEAudioControllerCurrentAudioTimestamp(__unsafe_unretained AEAudi
                 }
             }
             
-            if ( _started && !self.running ) {
+            if ( self->_started && !self.running ) {
                 [self start:NULL];
             }
             
             [[NSNotificationCenter defaultCenter] postNotificationName:AEAudioControllerSessionInterruptionEndedNotification object:self];
         } else if ( [notification.userInfo[AVAudioSessionInterruptionTypeKey] intValue] == AVAudioSessionInterruptionTypeBegan ) {
-            if ( _interrupted ) return;
+            if ( self->_interrupted ) return;
             
             NSLog(@"TAAE: Audio session interrupted");
-            _interrupted = YES;
+            self->_interrupted = YES;
             
             [self stopInternal];
 
             UInt32 iaaConnected;
             UInt32 size = sizeof(iaaConnected);
-            AudioUnitGetProperty(_ioAudioUnit, kAudioUnitProperty_IsInterAppConnected, kAudioUnitScope_Global, 0, &iaaConnected, &size);
+            AudioUnitGetProperty(self->_ioAudioUnit, kAudioUnitProperty_IsInterAppConnected, kAudioUnitScope_Global, 0, &iaaConnected, &size);
             if ( iaaConnected ) {
                 NSLog(@"TAAE: Audio session interrupted while connected to IAA, restarting");
                 [self start:NULL];
@@ -2351,7 +2351,7 @@ AudioTimeStamp AEAudioControllerCurrentAudioTimestamp(__unsafe_unretained AEAudi
 
 - (void)audioRouteChangeNotification:(NSNotification*)notification {
     dispatch_async(dispatch_get_main_queue(), ^{
-        if ( _interrupted || !self.running ) return;
+        if ( self->_interrupted || !self.running ) return;
         
         AVAudioSession *audioSession = [AVAudioSession sharedInstance];
         AVAudioSessionRouteDescription *currentRoute = audioSession.currentRoute;
@@ -2365,25 +2365,25 @@ AudioTimeStamp AEAudioControllerCurrentAudioTimestamp(__unsafe_unretained AEAudi
         }
         
         BOOL updatedVP = NO;
-        if ( _playingThroughDeviceSpeaker != playingThroughSpeaker ) {
+        if ( self->_playingThroughDeviceSpeaker != playingThroughSpeaker ) {
             [self willChangeValueForKey:@"playingThroughDeviceSpeaker"];
-            _playingThroughDeviceSpeaker = playingThroughSpeaker;
+            self->_playingThroughDeviceSpeaker = playingThroughSpeaker;
             [self didChangeValueForKey:@"playingThroughDeviceSpeaker"];
             
-            if ( _voiceProcessingEnabled && _voiceProcessingOnlyForSpeakerAndMicrophone ) {
+            if ( self->_voiceProcessingEnabled && self->_voiceProcessingOnlyForSpeakerAndMicrophone ) {
                 if ( [self mustUpdateVoiceProcessingSettings] ) {
                     [self replaceIONode];
                     updatedVP = YES;
                 }
             }
             
-            if ( _useMeasurementMode && _avoidMeasurementModeForBuiltInSpeaker ) {
+            if ( self->_useMeasurementMode && self->_avoidMeasurementModeForBuiltInSpeaker ) {
                 NSError *error = nil;
-                if ( ![audioSession setMode:!_playingThroughDeviceSpeaker ? AVAudioSessionModeMeasurement : AVAudioSessionModeDefault
+                if ( ![audioSession setMode:!self->_playingThroughDeviceSpeaker ? AVAudioSessionModeMeasurement : AVAudioSessionModeDefault
                                       error:&error] ) {
                     NSLog(@"TAAE: Couldn't set audio session mode: %@", error);
                 } else {
-                    if ( ![audioSession setPreferredIOBufferDuration:_preferredBufferDuration error:&error] ) {
+                    if ( ![audioSession setPreferredIOBufferDuration:self->_preferredBufferDuration error:&error] ) {
                         NSLog(@"TAAE: Couldn't set preferred IO buffer duration: %@", error);
                     }
                 }
@@ -2396,21 +2396,21 @@ AudioTimeStamp AEAudioControllerCurrentAudioTimestamp(__unsafe_unretained AEAudi
         } else {
             recordingThroughMic = NO;
         }
-        if ( _recordingThroughDeviceMicrophone != recordingThroughMic ) {
+        if ( self->_recordingThroughDeviceMicrophone != recordingThroughMic ) {
             [self willChangeValueForKey:@"recordingThroughDeviceMicrophone"];
-            _recordingThroughDeviceMicrophone = recordingThroughMic;
+            self->_recordingThroughDeviceMicrophone = recordingThroughMic;
             [self didChangeValueForKey:@"recordingThroughDeviceMicrophone"];
         }
         
-        if ( _inputEnabled ) {
+        if ( self->_inputEnabled ) {
             __cachedInputLatency = audioSession.inputLatency;
         }
-        if (_outputEnabled) {
+        if (self->_outputEnabled) {
             __cachedOutputLatency = audioSession.outputLatency;
         }
         
         int reason = [notification.userInfo[AVAudioSessionRouteChangeReasonKey] intValue];
-        if ( !updatedVP && (reason == AVAudioSessionRouteChangeReasonNewDeviceAvailable || reason == AVAudioSessionRouteChangeReasonOldDeviceUnavailable) && _inputEnabled ) {
+        if ( !updatedVP && (reason == AVAudioSessionRouteChangeReasonNewDeviceAvailable || reason == AVAudioSessionRouteChangeReasonOldDeviceUnavailable) && self->_inputEnabled ) {
             [self updateInputDeviceStatus];
         }
         
@@ -3272,19 +3272,19 @@ static void audioUnitStreamFormatChanged(void *inRefCon, AudioUnit inUnit, Audio
     
     // Set input stream format and update the properties, on the realtime thread
     [self performSynchronousMessageExchangeWithBlock:^{
-        _numberOfInputChannels    = numberOfInputChannels;
-        _rawInputAudioDescription = rawAudioDescription;
-        _inputAudioBufferList     = inputAudioBufferList;
+        self->_numberOfInputChannels    = numberOfInputChannels;
+        self->_rawInputAudioDescription = rawAudioDescription;
+        self->_inputAudioBufferList     = inputAudioBufferList;
 #if TARGET_OS_IPHONE
-        _inputAudioScratchBufferList = inputAudioScratchBufferList;
-        _inputAudioFloatConverter = inputAudioFloatConverter;
+        self->_inputAudioScratchBufferList = inputAudioScratchBufferList;
+        self->_inputAudioFloatConverter = inputAudioFloatConverter;
 #endif
-        _audioInputAvailable      = inputAvailable;
-        _hardwareInputAvailable   = hardwareInputAvailable;
-        _inputCallbacks           = inputCallbacks;
-        _inputCallbackCount       = inputCallbackCount;
-        _usingAudiobusInput       = usingAudiobusReceiver;
-        _inputLevelMonitorData    = inputLevelMonitorData;
+        self->_audioInputAvailable      = inputAvailable;
+        self->_hardwareInputAvailable   = hardwareInputAvailable;
+        self->_inputCallbacks           = inputCallbacks;
+        self->_inputCallbackCount       = inputCallbackCount;
+        self->_usingAudiobusInput       = usingAudiobusReceiver;
+        self->_inputLevelMonitorData    = inputLevelMonitorData;
     }];
 
 #if TARGET_OS_IPHONE
@@ -3988,8 +3988,8 @@ static void removeCallbackFromTable(__unsafe_unretained AEAudioController *THIS,
     }
     [self performSynchronousMessageExchangeWithBlock:^{
         if ( inputCallbacks ) {
-            _inputCallbacks = inputCallbacks;
-            _inputCallbackCount = inputCallbackCount;
+            self->_inputCallbacks = inputCallbacks;
+            self->_inputCallbackCount = inputCallbackCount;
         }
         
         addCallbackToTable(self, callbackTable, callback, userInfo, flags);
@@ -4130,7 +4130,7 @@ static void performLevelMonitoring(audio_level_monitor_t* monitor, AudioBufferLi
             NSLog(@"TAAE: Changing sample rate to %g", asbd.mSampleRate);
             if ( ![self reinitializeWithChanges:^{
                 [self willChangeValueForKey:@"audioDescription"];
-                _audioDescription.mSampleRate = asbd.mSampleRate;
+                self->_audioDescription.mSampleRate = asbd.mSampleRate;
                 [self didChangeValueForKey:@"audioDescription"];
             } error:&error] ) {
                 NSLog(@"TAAE: Couldn't change sample rate: %@", error);
