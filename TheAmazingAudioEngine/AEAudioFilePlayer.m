@@ -146,8 +146,10 @@ UInt32 AEAudioFilePlayerGetPlayhead(__unsafe_unretained AEAudioFilePlayer * THIS
     // Open the file
     result = AudioFileOpenURL((__bridge CFURLRef)url, kAudioFileReadPermission, 0, &_audioFile);
     if ( !AECheckOSStatus(result, "AudioFileOpenURL") ) {
-        *error = [NSError errorWithDomain:NSOSStatusErrorDomain code:result
-                                 userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Couldn't open the audio file", @"")}];
+        if ( error != NULL ) {
+            *error = [NSError errorWithDomain:NSOSStatusErrorDomain code:result
+                                     userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Couldn't open the audio file", @"")}];
+        }
         return NO;
     }
     
@@ -155,8 +157,10 @@ UInt32 AEAudioFilePlayerGetPlayhead(__unsafe_unretained AEAudioFilePlayer * THIS
     UInt32 size = sizeof(_fileDescription);
     result = AudioFileGetProperty(_audioFile, kAudioFilePropertyDataFormat, &size, &_fileDescription);
     if ( !AECheckOSStatus(result, "AudioFileGetProperty(kAudioFilePropertyDataFormat)") ) {
-        *error = [NSError errorWithDomain:NSOSStatusErrorDomain code:result
-                                 userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Couldn't read the audio file", @"")}];
+        if ( error != NULL ) {
+            *error = [NSError errorWithDomain:NSOSStatusErrorDomain code:result
+                                     userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Couldn't read the audio file", @"")}];
+        }
         AudioFileClose(_audioFile);
         _audioFile = NULL;
         return NO;
@@ -178,8 +182,10 @@ UInt32 AEAudioFilePlayerGetPlayhead(__unsafe_unretained AEAudioFilePlayer * THIS
         size = sizeof(packetCount);
         result = AudioFileGetProperty(_audioFile, kAudioFilePropertyAudioDataPacketCount, &size, &packetCount);
         if ( !AECheckOSStatus(result, "AudioFileGetProperty(kAudioFilePropertyAudioDataPacketCount)") ) {
-            *error = [NSError errorWithDomain:NSOSStatusErrorDomain code:result
-                                     userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Couldn't read the audio file", @"")}];
+            if ( error != NULL ) {
+                *error = [NSError errorWithDomain:NSOSStatusErrorDomain code:result
+                                         userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Couldn't read the audio file", @"")}];
+            }
             AudioFileClose(_audioFile);
             _audioFile = NULL;
             return NO;
@@ -188,8 +194,10 @@ UInt32 AEAudioFilePlayerGetPlayhead(__unsafe_unretained AEAudioFilePlayer * THIS
     }
     
     if ( fileLengthInFrames == 0 ) {
-        *error = [NSError errorWithDomain:NSOSStatusErrorDomain code:-50
-                                 userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"This audio file is empty", @"")}];
+        if ( error != NULL ) {
+            *error = [NSError errorWithDomain:NSOSStatusErrorDomain code:-50
+                                     userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"This audio file is empty", @"")}];
+        }
         AudioFileClose(_audioFile);
         _audioFile = NULL;
         return NO;
